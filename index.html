@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 export default function App() {
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [customAmountStr, setCustomAmountStr] = useState('');
   const [message, setMessage] = useState(null); // { text, type: 'error' | 'success' }
-  const [showQR, setShowQR] = useState(false);
-  const [qrUrl, setQrUrl] = useState('');
+  const [showMobileQR, setShowMobileQR] = useState(false);
 
   // ── Config ──
   const UPI_ID = 'hzmujawar99@okhdfcbank';
@@ -25,10 +24,10 @@ export default function App() {
   const handleCourseSelect = (id) => {
     setSelectedCourseId(id);
     if (id !== 'custom') {
-      setCustomAmountStr(''); // Reset custom amount when switching to standard course
+      setCustomAmountStr('');
     }
     setMessage(null);
-    setShowQR(false); // Hide QR when changing selection
+    setShowMobileQR(false);
   };
 
   const getFinalAmount = () => {
@@ -36,12 +35,26 @@ export default function App() {
       const val = parseFloat(customAmountStr);
       return (!isNaN(val) && val > 0) ? val : 0;
     }
-    const course = courses.find(c => c.id === selectedCourseId);
+    const course = courses.find((c) => c.id === selectedCourseId);
     return course ? course.price : 0;
   };
 
   const finalAmount = getFinalAmount();
   const isValidAmount = finalAmount > 0;
+
+  // Dynamically generate the UPI URL when the amount changes
+  const upiUrl = useMemo(() => {
+    if (!isValidAmount) return '';
+    const trId = `TXN${Date.now()}`;
+    const note = encodeURIComponent('Course Payment');
+    const name = encodeURIComponent(UPI_NAME);
+    const am = finalAmount.toFixed(2);
+    return `upi://pay?pa=${UPI_ID}&pn=${name}&mc=8299&mode=02&purpose=00&am=${am}&cu=INR&tn=${note}&tr=${trId}`;
+  }, [finalAmount, isValidAmount]);
+
+  const qrUrl = upiUrl 
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUrl)}&margin=10&bgcolor=ffffff` 
+    : '';
 
   const showMsg = (text, type) => {
     setMessage({ text, type });
@@ -54,28 +67,11 @@ export default function App() {
       return;
     }
 
-    // ✅ Generate a unique transaction reference
-    const trId = `TXN${Date.now()}`;
-    
-    // ✅ Add Advanced Parameters (mc, mode, purpose) to bypass security blocks
-    const note = encodeURIComponent('Course Payment');
-    const name = encodeURIComponent(UPI_NAME);
-    const am = finalAmount.toFixed(2);
-    
-    // mc=8299 is for Education/Training Services. mode=02 is secure intent. purpose=00 is default.
-    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${name}&mc=8299&mode=02&purpose=00&am=${am}&cu=INR&tn=${note}&tr=${trId}`;
-
-    // Generate QR Code URL for fallback
-    const generatedQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}&margin=10&bgcolor=ffffff`;
-    setQrUrl(generatedQrUrl);
-    setShowQR(true); // Show the QR code
-
-    // Try opening the UPI App
     window.location.href = upiUrl;
 
-    // Friendly fallback
     setTimeout(() => {
-      showMsg('📲 If the app failed or didn\'t open, please take a screenshot and scan the QR code below.', 'success');
+      showMsg("📲 If the app didn't open, please take a screenshot and scan the QR code below.", 'success');
+      setShowMobileQR(true);
     }, 2500);
   };
 
@@ -86,44 +82,91 @@ export default function App() {
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}</style>
       
-      <div className="min-h-screen bg-[#f5f0e8] flex items-center justify-center p-4 font-outfit">
-        <div className="bg-[#1a1a2e] rounded-[28px] w-full max-w-[400px] overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.05)]">
+      <div className="min-h-screen bg-[#f5f0e8] flex items-center justify-center p-4 lg:p-8 font-outfit">
+        {/* Main Card Container - Responsive Split Layout */}
+        <div className="bg-[#1a1a2e] rounded-[28px] w-full max-w-[400px] lg:max-w-[900px] flex flex-col lg:flex-row overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.05)]">
           
-          {/* Header */}
-          <div className="bg-gradient-to-br from-[#e8b44a] to-[#d4951e] pt-[28px] px-[28px] pb-[24px] relative overflow-hidden">
-            <div className="absolute -top-[40px] -right-[40px] w-[140px] h-[140px] rounded-full bg-white/10"></div>
-            <div className="absolute -bottom-[20px] left-[30px] w-[80px] h-[80px] rounded-full bg-white/10 opacity-70"></div>
+          {/* ================= LEFT PANE: BRAND & SELECTION ================= */}
+          <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-white/10 relative">
             
-            <div className="flex items-center gap-[10px] mb-[14px] relative z-10">
-              <div className="w-[38px] h-[38px] bg-white/20 rounded-[10px] flex items-center justify-center text-[18px]">
-                📈
-              </div>
-              <div>
-                <div className="font-extrabold text-[20px] text-white tracking-[-0.3px] leading-tight">
-                  Captgains
+            {/* Header */}
+            <div className="bg-gradient-to-br from-[#e8b44a] to-[#d4951e] pt-[28px] px-[28px] lg:px-[36px] pb-[24px] relative overflow-hidden shrink-0">
+              <div className="absolute -top-[40px] -right-[40px] w-[140px] h-[140px] rounded-full bg-white/10"></div>
+              <div className="absolute -bottom-[20px] left-[30px] w-[80px] h-[80px] rounded-full bg-white/10 opacity-70"></div>
+              
+              <div className="flex items-center gap-[10px] mb-[14px] relative z-10">
+                <div className="w-[42px] h-[42px] bg-white/20 rounded-[12px] flex items-center justify-center text-[20px]">
+                  📈
                 </div>
-                <div className="text-[12px] text-white/75 font-medium leading-tight mt-0.5">
-                  Trading & Training Institute
+                <div>
+                  <div className="font-extrabold text-[22px] text-white tracking-[-0.3px] leading-tight">
+                    Captgains
+                  </div>
+                  <div className="text-[13px] text-white/80 font-medium leading-tight mt-0.5">
+                    Trading & Training Institute
+                  </div>
                 </div>
               </div>
+              
+              <h2 className="text-[16px] font-medium text-white/90 relative z-10 m-0">
+                Quick UPI Checkout
+              </h2>
             </div>
-            
-            <h2 className="text-[15px] font-medium text-white/80 relative z-10 m-0">
-              Quick UPI Payment
-            </h2>
-            
-            <div className="inline-flex items-center gap-[6px] bg-white/20 rounded-full px-[12px] py-[5px] mt-[10px] text-[13px] text-white font-semibold relative z-10">
-              <span className="w-[7px] h-[7px] bg-[#7cfc00] rounded-full animate-pulse"></span>
-              {UPI_ID}
+
+            {/* Course Selector */}
+            <div className="p-[24px] lg:p-[32px] flex-1">
+              <div className="text-[11px] font-bold uppercase tracking-[1.2px] text-[#7a7a9a] mb-[16px]">
+                Select a Program
+              </div>
+              
+              <div className="flex flex-col gap-[10px] mb-[20px]">
+                {courses.map((course) => {
+                  const isSelected = selectedCourseId === course.id;
+                  return (
+                    <label 
+                      key={course.id}
+                      className={`flex items-center justify-between bg-[#22223a] border-[1.5px] rounded-[14px] px-[16px] py-[14px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45] ${
+                        isSelected ? 'border-[#e8b44a] bg-[#e8b44a]/10 shadow-[0_4px_12px_rgba(232,180,74,0.1)]' : 'border-transparent'
+                      }`}
+                      onClick={() => handleCourseSelect(course.id)}
+                    >
+                      <input type="radio" name="course" className="hidden" />
+                      <span className="text-[14px] font-semibold text-[#e0e0f0]">{course.name}</span>
+                      <span className="text-[14px] font-bold text-[#e8b44a]">
+                        {course.price > 0 ? `₹${course.price.toLocaleString('en-IN')}` : '–'}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {/* Custom amount */}
+              {isCustom && (
+                <div className="flex gap-[10px] mb-[10px] items-center animate-in slide-in-from-top-2 duration-200">
+                  <span className="text-[14px] font-semibold text-[#7a7a9a] whitespace-nowrap">₹</span>
+                  <input 
+                    className="flex-1 bg-[#22223a] border-[1.5px] border-[#2e2e4a] rounded-[12px] px-[16px] py-[12px] text-[#e0e0f0] font-outfit text-[16px] font-semibold outline-none transition-colors focus:border-[#e8b44a] placeholder:text-[#444460] placeholder:font-normal"
+                    type="number" 
+                    placeholder="Enter custom amount" 
+                    min="1"
+                    value={customAmountStr}
+                    onChange={(e) => {
+                      setCustomAmountStr(e.target.value);
+                      setMessage(null);
+                      setShowMobileQR(false);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Body */}
-          <div className="p-[24px] pb-[28px]">
+          {/* ================= RIGHT PANE: PAYMENT ACTION ================= */}
+          <div className="flex-1 bg-[#151525] p-[24px] lg:p-[40px] flex flex-col justify-center">
             
             {/* Error / Success Message Box */}
             {message && (
-              <div className={`rounded-[12px] p-[12px_14px] text-[13px] font-medium leading-relaxed mb-[14px] ${
+              <div className={`rounded-[12px] p-[14px_16px] text-[13px] font-medium leading-relaxed mb-[20px] animate-in fade-in duration-300 ${
                 message.type === 'error' 
                   ? 'bg-[#ff5050]/10 border border-[#ff5050]/30 text-[#ff9090]' 
                   : 'bg-[#64dc82]/10 border border-[#64dc82]/30 text-[#80f0a0]'
@@ -132,94 +175,83 @@ export default function App() {
               </div>
             )}
 
-            {/* Course selector */}
-            <div className="text-[11px] font-bold uppercase tracking-[1.2px] text-[#7a7a9a] mb-[12px]">
-              Select Course
-            </div>
-            
-            <div className="flex flex-col gap-[8px] mb-[20px]">
-              {courses.map((course) => {
-                const isSelected = selectedCourseId === course.id;
-                return (
-                  <label 
-                    key={course.id}
-                    className={`flex items-center justify-between bg-[#22223a] border-[1.5px] rounded-[14px] px-[16px] py-[13px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45] ${
-                      isSelected ? 'border-[#e8b44a] bg-[#e8b44a]/10' : 'border-transparent'
-                    }`}
-                    onClick={() => handleCourseSelect(course.id)}
-                  >
-                    <input type="radio" name="course" className="hidden" />
-                    <span className="text-[14px] font-semibold text-[#e0e0f0]">{course.name}</span>
-                    <span className="text-[14px] font-bold text-[#e8b44a]">
-                      {course.price > 0 ? `₹${course.price.toLocaleString('en-IN')}` : '–'}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-
-            {/* Custom amount */}
-            {isCustom && (
-              <div className="flex gap-[10px] mb-[20px] items-center">
-                <span className="text-[13px] font-semibold text-[#7a7a9a] whitespace-nowrap">₹</span>
-                <input 
-                  className="flex-1 bg-[#22223a] border-[1.5px] border-[#2e2e4a] rounded-[12px] px-[14px] py-[11px] text-[#e0e0f0] font-outfit text-[15px] font-semibold outline-none transition-colors focus:border-[#e8b44a] placeholder:text-[#444460] placeholder:font-normal"
-                  type="number" 
-                  placeholder="Enter amount" 
-                  min="1"
-                  value={customAmountStr}
-                  onChange={(e) => {
-                    setCustomAmountStr(e.target.value);
-                    setMessage(null);
-                    setShowQR(false);
-                  }}
-                />
-              </div>
-            )}
-
             {/* Amount display */}
-            <div className="bg-gradient-to-br from-[#e8b44a]/10 to-[#e8b44a]/5 border border-[#e8b44a]/25 rounded-[14px] p-[16px] flex items-center justify-between mb-[20px]">
-              <span className="text-[12px] text-[#7a7a9a] font-medium">Amount to Pay</span>
-              <span className="text-[24px] font-extrabold text-[#e8b44a] tracking-[-0.5px]">
-                {isValidAmount ? `₹ ${finalAmount.toLocaleString('en-IN')}` : '₹ —'}
-              </span>
+            <div className="bg-gradient-to-br from-[#e8b44a]/10 to-[#e8b44a]/5 border border-[#e8b44a]/25 rounded-[16px] p-[20px] flex items-center justify-between mb-[24px]">
+              <div>
+                <span className="block text-[12px] text-[#7a7a9a] font-semibold uppercase tracking-wider mb-1">Amount to Pay</span>
+                <span className="text-[28px] font-extrabold text-[#e8b44a] tracking-[-0.5px] leading-none">
+                  {isValidAmount ? `₹ ${finalAmount.toLocaleString('en-IN')}` : '₹ 0'}
+                </span>
+              </div>
+              <div className="bg-[#e8b44a]/20 text-[#e8b44a] text-[11px] font-bold px-[10px] py-[4px] rounded-full">
+                INR
+              </div>
             </div>
 
-            {/* Pay Button */}
-            <button 
-              className="w-full p-[17px] border-none rounded-[16px] bg-gradient-to-br from-[#e8b44a] to-[#d4951e] text-[#1a1a2e] font-outfit text-[16px] font-extrabold cursor-pointer tracking-[0.3px] transition-all shadow-[0_8px_24px_rgba(232,180,74,0.35)] mb-[12px] flex items-center justify-center gap-[8px] hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(232,180,74,0.45)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
-              onClick={openUPI}
-              disabled={!isValidAmount}
-            >
-              ⚡ Pay via UPI App
-            </button>
-
-            {/* QR Code Fallback */}
-            {showQR && (
-              <div className="mt-4 mb-4 bg-[#22223a] border border-[#2e2e4a] rounded-[16px] p-4 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
-                <p className="text-[12px] text-[#e8b44a] font-bold mb-3 uppercase tracking-wide">Alternative Option</p>
-                <div className="bg-white p-3 rounded-[12px] mb-3">
-                  <img src={qrUrl} alt="UPI QR Code" className="w-[180px] h-[180px] object-contain" />
+            {/* ── DESKTOP UX: Show QR Code by Default ── */}
+            <div className="hidden lg:flex flex-col items-center justify-center bg-[#1a1a2e] border border-[#2e2e4a] rounded-[20px] p-[24px] mb-[20px]">
+              {isValidAmount ? (
+                <div className="flex flex-col items-center animate-in zoom-in duration-300">
+                  <div className="bg-white p-[12px] rounded-[16px] shadow-lg mb-[16px]">
+                    <img src={qrUrl} alt="UPI QR Code" className="w-[180px] h-[180px] object-contain" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[14px] text-[#e0e0f0] font-semibold mb-1">Scan to Pay via any UPI App</p>
+                    <p className="text-[12px] text-[#7a7a9a]">GPay, PhonePe, Paytm, CRED, BHIM</p>
+                  </div>
                 </div>
-                <p className="text-[12px] text-[#7a7a9a] leading-relaxed">
-                  Take a screenshot and open PhonePe / GPay <br/> 
-                  Select <strong className="text-[#e0e0f0]">"Scan from Gallery"</strong>
-                </p>
-              </div>
-            )}
+              ) : (
+                <div className="w-[180px] h-[180px] border-2 border-dashed border-[#2e2e4a] rounded-[16px] flex flex-col items-center justify-center text-center p-4 mb-[16px]">
+                  <span className="text-[32px] mb-2 opacity-50">📲</span>
+                  <p className="text-[12px] text-[#7a7a9a] font-medium">Select a program to generate QR code</p>
+                </div>
+              )}
+            </div>
 
-            {/* Apps */}
-            <div className="flex gap-[6px] justify-center flex-wrap mb-[16px]">
-              {['GPay', 'PhonePe', 'Paytm', 'BHIM', 'Amazon Pay'].map(app => (
-                <span key={app} className="bg-[#22223a] rounded-[8px] px-[10px] py-[5px] text-[11px] text-[#7a7a9a] font-semibold">
-                  {app}
-                </span>
-              ))}
+            {/* ── MOBILE UX: Show Pay Button Prominently ── */}
+            <div className="lg:hidden flex flex-col gap-[12px] mb-[24px]">
+              <button 
+                className="w-full p-[18px] border-none rounded-[16px] bg-gradient-to-br from-[#e8b44a] to-[#d4951e] text-[#1a1a2e] font-outfit text-[17px] font-extrabold cursor-pointer tracking-[0.3px] transition-all shadow-[0_8px_24px_rgba(232,180,74,0.35)] flex items-center justify-center gap-[8px] hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(232,180,74,0.45)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                onClick={openUPI}
+                disabled={!isValidAmount}
+              >
+                ⚡ Pay via UPI App
+              </button>
+              
+              {isValidAmount && !showMobileQR && (
+                <button 
+                  onClick={() => setShowMobileQR(true)}
+                  className="text-[13px] text-[#7a7a9a] font-medium hover:text-[#e0e0f0] transition-colors py-2"
+                >
+                  Having trouble? Show QR Code instead
+                </button>
+              )}
+
+              {/* Mobile QR Fallback */}
+              {showMobileQR && isValidAmount && (
+                <div className="bg-[#1a1a2e] border border-[#2e2e4a] rounded-[16px] p-4 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
+                  <p className="text-[12px] text-[#e8b44a] font-bold mb-3 uppercase tracking-wide">Scan to Pay</p>
+                  <div className="bg-white p-3 rounded-[12px] mb-3">
+                    <img src={qrUrl} alt="UPI QR Code" className="w-[160px] h-[160px] object-contain" />
+                  </div>
+                  <p className="text-[12px] text-[#7a7a9a] leading-relaxed">
+                    Take a screenshot and use <strong className="text-[#e0e0f0]">Scan from Gallery</strong> in your UPI app.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Unified App Tags */}
+            <div className="hidden lg:flex justify-center gap-[8px] flex-wrap mb-[20px]">
+              <div className="inline-flex items-center gap-[6px] bg-[#1a1a2e] border border-[#2e2e4a] rounded-full px-[14px] py-[6px] text-[12px] text-[#7a7a9a] font-semibold">
+                <span className="w-[6px] h-[6px] bg-[#7cfc00] rounded-full"></span>
+                {UPI_ID}
+              </div>
             </div>
 
             {/* Fix note */}
-            <div className="bg-[#64dc82]/10 border border-[#64dc82]/20 rounded-[12px] p-[12px_14px] text-[12px] text-[#80c090] leading-[1.6]">
-              ✅ <strong className="text-[#90f0a0]">Fixed:</strong> Uses complete <code>upi://pay</code> link with <strong className="text-[#90f0a0]">pa, pn, am, cu, tn, tr, mc, mode</strong> — all required fields included. QR Fallback added.
+            <div className="bg-[#64dc82]/10 border border-[#64dc82]/20 rounded-[12px] p-[14px] text-[12px] text-[#80c090] leading-[1.6] mt-auto">
+              ✅ <strong className="text-[#90f0a0]">Verified:</strong> Secured connection with strict <strong className="text-[#90f0a0]">mc, mode, tr</strong> parameters for successful debit mapping.
             </div>
 
           </div>
