@@ -1,262 +1,356 @@
-import React, { useState, useMemo } from 'react';
-
-export default function App() {
-  const [selectedCourseId, setSelectedCourseId] = useState(null);
-  const [customAmountStr, setCustomAmountStr] = useState('');
-  const [message, setMessage] = useState(null); // { text, type: 'error' | 'success' }
-  const [showMobileQR, setShowMobileQR] = useState(false);
-
-  // ── Config ──
-  const UPI_ID = 'hzmujawar99@okhdfcbank';
-  const UPI_NAME = 'Captgains';
-
-  const courses = [
-    { id: 1, name: 'Beginner / Foundation Course', price: 10000 },
-    { id: 2, name: 'Technical Analysis', price: 20000 },
-    { id: 3, name: 'Fundamental Analysis & Valuation', price: 45000 },
-    { id: 4, name: 'Derivatives & Options Strategies', price: 50000 },
-    { id: 5, name: 'Certification Course', price: 60000 },
-    { id: 'custom', name: 'Other / Custom Amount', price: 0 }
-  ];
-
-  const isCustom = selectedCourseId === 'custom';
-
-  const handleCourseSelect = (id) => {
-    setSelectedCourseId(id);
-    if (id !== 'custom') {
-      setCustomAmountStr('');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captgains - UPI Payment Gateway</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Outfit', sans-serif; background-color: #f5f0e8; }
+    
+    /* Custom Animations */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+    .zoom-in { animation: zoomIn 0.3s ease-out forwards; }
+    
+    @keyframes pulse-dot { 
+      0%, 100% { opacity: 1; transform: scale(1); } 
+      50% { opacity: 0.5; transform: scale(0.8); } 
     }
-    setMessage(null);
-    setShowMobileQR(false);
-  };
+    .animate-pulse-dot { animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 lg:p-8">
 
-  const getFinalAmount = () => {
-    if (isCustom) {
-      const val = parseFloat(customAmountStr);
-      return (!isNaN(val) && val > 0) ? val : 0;
-    }
-    const course = courses.find((c) => c.id === selectedCourseId);
-    return course ? course.price : 0;
-  };
-
-  const finalAmount = getFinalAmount();
-  const isValidAmount = finalAmount > 0;
-
-  // Dynamically generate the UPI URL when the amount changes
-  const upiUrl = useMemo(() => {
-    if (!isValidAmount) return '';
-    const trId = `TXN${Date.now()}`;
-    const note = encodeURIComponent('Course Payment');
-    const name = encodeURIComponent(UPI_NAME);
-    const am = finalAmount.toFixed(2);
-    return `upi://pay?pa=${UPI_ID}&pn=${name}&mc=8299&mode=02&purpose=00&am=${am}&cu=INR&tn=${note}&tr=${trId}`;
-  }, [finalAmount, isValidAmount]);
-
-  const qrUrl = upiUrl 
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUrl)}&margin=10&bgcolor=ffffff` 
-    : '';
-
-  const showMsg = (text, type) => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 7000);
-  };
-
-  const openUPI = () => {
-    if (!isValidAmount) {
-      showMsg('❌ Please select a course or enter a valid amount.', 'error');
-      return;
-    }
-
-    window.location.href = upiUrl;
-
-    setTimeout(() => {
-      showMsg("📲 If the app didn't open, please take a screenshot and scan the QR code below.", 'success');
-      setShowMobileQR(true);
-    }, 2500);
-  };
-
-  return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-      `}</style>
+  <!-- Main Card Container - Responsive Split Layout -->
+  <div class="bg-[#1a1a2e] rounded-[28px] w-full max-w-[400px] lg:max-w-[900px] flex flex-col lg:flex-row overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.05)]">
+    
+    <!-- ================= LEFT PANE: BRAND & SELECTION ================= -->
+    <div class="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-white/10 relative">
       
-      <div className="min-h-screen bg-[#f5f0e8] flex items-center justify-center p-4 lg:p-8 font-outfit">
-        {/* Main Card Container - Responsive Split Layout */}
-        <div className="bg-[#1a1a2e] rounded-[28px] w-full max-w-[400px] lg:max-w-[900px] flex flex-col lg:flex-row overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.05)]">
-          
-          {/* ================= LEFT PANE: BRAND & SELECTION ================= */}
-          <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-white/10 relative">
-            
-            {/* Header */}
-            <div className="bg-gradient-to-br from-[#e8b44a] to-[#d4951e] pt-[28px] px-[28px] lg:px-[36px] pb-[24px] relative overflow-hidden shrink-0">
-              <div className="absolute -top-[40px] -right-[40px] w-[140px] h-[140px] rounded-full bg-white/10"></div>
-              <div className="absolute -bottom-[20px] left-[30px] w-[80px] h-[80px] rounded-full bg-white/10 opacity-70"></div>
-              
-              <div className="flex items-center gap-[10px] mb-[14px] relative z-10">
-                <div className="w-[42px] h-[42px] bg-white/20 rounded-[12px] flex items-center justify-center text-[20px]">
-                  📈
-                </div>
-                <div>
-                  <div className="font-extrabold text-[22px] text-white tracking-[-0.3px] leading-tight">
-                    Captgains
-                  </div>
-                  <div className="text-[13px] text-white/80 font-medium leading-tight mt-0.5">
-                    Trading & Training Institute
-                  </div>
-                </div>
-              </div>
-              
-              <h2 className="text-[16px] font-medium text-white/90 relative z-10 m-0">
-                Quick UPI Checkout
-              </h2>
-            </div>
-
-            {/* Course Selector */}
-            <div className="p-[24px] lg:p-[32px] flex-1">
-              <div className="text-[11px] font-bold uppercase tracking-[1.2px] text-[#7a7a9a] mb-[16px]">
-                Select a Program
-              </div>
-              
-              <div className="flex flex-col gap-[10px] mb-[20px]">
-                {courses.map((course) => {
-                  const isSelected = selectedCourseId === course.id;
-                  return (
-                    <label 
-                      key={course.id}
-                      className={`flex items-center justify-between bg-[#22223a] border-[1.5px] rounded-[14px] px-[16px] py-[14px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45] ${
-                        isSelected ? 'border-[#e8b44a] bg-[#e8b44a]/10 shadow-[0_4px_12px_rgba(232,180,74,0.1)]' : 'border-transparent'
-                      }`}
-                      onClick={() => handleCourseSelect(course.id)}
-                    >
-                      <input type="radio" name="course" className="hidden" />
-                      <span className="text-[14px] font-semibold text-[#e0e0f0]">{course.name}</span>
-                      <span className="text-[14px] font-bold text-[#e8b44a]">
-                        {course.price > 0 ? `₹${course.price.toLocaleString('en-IN')}` : '–'}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              {/* Custom amount */}
-              {isCustom && (
-                <div className="flex gap-[10px] mb-[10px] items-center animate-in slide-in-from-top-2 duration-200">
-                  <span className="text-[14px] font-semibold text-[#7a7a9a] whitespace-nowrap">₹</span>
-                  <input 
-                    className="flex-1 bg-[#22223a] border-[1.5px] border-[#2e2e4a] rounded-[12px] px-[16px] py-[12px] text-[#e0e0f0] font-outfit text-[16px] font-semibold outline-none transition-colors focus:border-[#e8b44a] placeholder:text-[#444460] placeholder:font-normal"
-                    type="number" 
-                    placeholder="Enter custom amount" 
-                    min="1"
-                    value={customAmountStr}
-                    onChange={(e) => {
-                      setCustomAmountStr(e.target.value);
-                      setMessage(null);
-                      setShowMobileQR(false);
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+      <!-- Header -->
+      <div class="bg-gradient-to-br from-[#e8b44a] to-[#d4951e] pt-[28px] px-[28px] lg:px-[36px] pb-[24px] relative overflow-hidden shrink-0">
+        <div class="absolute -top-[40px] -right-[40px] w-[140px] h-[140px] rounded-full bg-white/10"></div>
+        <div class="absolute -bottom-[20px] left-[30px] w-[80px] h-[80px] rounded-full bg-white/10 opacity-70"></div>
+        
+        <div class="flex items-center gap-[10px] mb-[14px] relative z-10">
+          <div class="w-[42px] h-[42px] bg-white/20 rounded-[12px] flex items-center justify-center text-[20px]">
+            📈
           </div>
-
-          {/* ================= RIGHT PANE: PAYMENT ACTION ================= */}
-          <div className="flex-1 bg-[#151525] p-[24px] lg:p-[40px] flex flex-col justify-center">
-            
-            {/* Error / Success Message Box */}
-            {message && (
-              <div className={`rounded-[12px] p-[14px_16px] text-[13px] font-medium leading-relaxed mb-[20px] animate-in fade-in duration-300 ${
-                message.type === 'error' 
-                  ? 'bg-[#ff5050]/10 border border-[#ff5050]/30 text-[#ff9090]' 
-                  : 'bg-[#64dc82]/10 border border-[#64dc82]/30 text-[#80f0a0]'
-              }`}>
-                {message.text}
-              </div>
-            )}
-
-            {/* Amount display */}
-            <div className="bg-gradient-to-br from-[#e8b44a]/10 to-[#e8b44a]/5 border border-[#e8b44a]/25 rounded-[16px] p-[20px] flex items-center justify-between mb-[24px]">
-              <div>
-                <span className="block text-[12px] text-[#7a7a9a] font-semibold uppercase tracking-wider mb-1">Amount to Pay</span>
-                <span className="text-[28px] font-extrabold text-[#e8b44a] tracking-[-0.5px] leading-none">
-                  {isValidAmount ? `₹ ${finalAmount.toLocaleString('en-IN')}` : '₹ 0'}
-                </span>
-              </div>
-              <div className="bg-[#e8b44a]/20 text-[#e8b44a] text-[11px] font-bold px-[10px] py-[4px] rounded-full">
-                INR
-              </div>
+          <div>
+            <div class="font-extrabold text-[22px] text-white tracking-[-0.3px] leading-tight">
+              Captgains
             </div>
-
-            {/* ── DESKTOP UX: Show QR Code by Default ── */}
-            <div className="hidden lg:flex flex-col items-center justify-center bg-[#1a1a2e] border border-[#2e2e4a] rounded-[20px] p-[24px] mb-[20px]">
-              {isValidAmount ? (
-                <div className="flex flex-col items-center animate-in zoom-in duration-300">
-                  <div className="bg-white p-[12px] rounded-[16px] shadow-lg mb-[16px]">
-                    <img src={qrUrl} alt="UPI QR Code" className="w-[180px] h-[180px] object-contain" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[14px] text-[#e0e0f0] font-semibold mb-1">Scan to Pay via any UPI App</p>
-                    <p className="text-[12px] text-[#7a7a9a]">GPay, PhonePe, Paytm, CRED, BHIM</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-[180px] h-[180px] border-2 border-dashed border-[#2e2e4a] rounded-[16px] flex flex-col items-center justify-center text-center p-4 mb-[16px]">
-                  <span className="text-[32px] mb-2 opacity-50">📲</span>
-                  <p className="text-[12px] text-[#7a7a9a] font-medium">Select a program to generate QR code</p>
-                </div>
-              )}
+            <div class="text-[13px] text-white/80 font-medium leading-tight mt-0.5">
+              Trading & Training Institute
             </div>
-
-            {/* ── MOBILE UX: Show Pay Button Prominently ── */}
-            <div className="lg:hidden flex flex-col gap-[12px] mb-[24px]">
-              <button 
-                className="w-full p-[18px] border-none rounded-[16px] bg-gradient-to-br from-[#e8b44a] to-[#d4951e] text-[#1a1a2e] font-outfit text-[17px] font-extrabold cursor-pointer tracking-[0.3px] transition-all shadow-[0_8px_24px_rgba(232,180,74,0.35)] flex items-center justify-center gap-[8px] hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(232,180,74,0.45)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
-                onClick={openUPI}
-                disabled={!isValidAmount}
-              >
-                ⚡ Pay via UPI App
-              </button>
-              
-              {isValidAmount && !showMobileQR && (
-                <button 
-                  onClick={() => setShowMobileQR(true)}
-                  className="text-[13px] text-[#7a7a9a] font-medium hover:text-[#e0e0f0] transition-colors py-2"
-                >
-                  Having trouble? Show QR Code instead
-                </button>
-              )}
-
-              {/* Mobile QR Fallback */}
-              {showMobileQR && isValidAmount && (
-                <div className="bg-[#1a1a2e] border border-[#2e2e4a] rounded-[16px] p-4 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
-                  <p className="text-[12px] text-[#e8b44a] font-bold mb-3 uppercase tracking-wide">Scan to Pay</p>
-                  <div className="bg-white p-3 rounded-[12px] mb-3">
-                    <img src={qrUrl} alt="UPI QR Code" className="w-[160px] h-[160px] object-contain" />
-                  </div>
-                  <p className="text-[12px] text-[#7a7a9a] leading-relaxed">
-                    Take a screenshot and use <strong className="text-[#e0e0f0]">Scan from Gallery</strong> in your UPI app.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Unified App Tags */}
-            <div className="hidden lg:flex justify-center gap-[8px] flex-wrap mb-[20px]">
-              <div className="inline-flex items-center gap-[6px] bg-[#1a1a2e] border border-[#2e2e4a] rounded-full px-[14px] py-[6px] text-[12px] text-[#7a7a9a] font-semibold">
-                <span className="w-[6px] h-[6px] bg-[#7cfc00] rounded-full"></span>
-                {UPI_ID}
-              </div>
-            </div>
-
-            {/* Fix note */}
-            <div className="bg-[#64dc82]/10 border border-[#64dc82]/20 rounded-[12px] p-[14px] text-[12px] text-[#80c090] leading-[1.6] mt-auto">
-              ✅ <strong className="text-[#90f0a0]">Verified:</strong> Secured connection with strict <strong className="text-[#90f0a0]">mc, mode, tr</strong> parameters for successful debit mapping.
-            </div>
-
           </div>
         </div>
+        
+        <h2 class="text-[16px] font-medium text-white/90 relative z-10 m-0">
+          Quick UPI Checkout
+        </h2>
       </div>
-    </>
-  );
-}
+
+      <!-- Course Selector -->
+      <div class="p-[24px] lg:p-[32px] flex-1">
+        <div class="text-[11px] font-bold uppercase tracking-[1.2px] text-[#7a7a9a] mb-[16px]">
+          Select a Program
+        </div>
+        
+        <div class="flex flex-col gap-[10px] mb-[20px]" id="course-list">
+          
+          <label id="course-1" class="course-opt flex items-center justify-between bg-[#22223a] border-[1.5px] border-transparent rounded-[14px] px-[16px] py-[14px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45]" onclick="selectCourse('1')">
+            <span class="text-[14px] font-semibold text-[#e0e0f0]">Beginner / Foundation Course</span>
+            <span class="text-[14px] font-bold text-[#e8b44a]">₹10,000</span>
+          </label>
+
+          <label id="course-2" class="course-opt flex items-center justify-between bg-[#22223a] border-[1.5px] border-transparent rounded-[14px] px-[16px] py-[14px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45]" onclick="selectCourse('2')">
+            <span class="text-[14px] font-semibold text-[#e0e0f0]">Technical Analysis</span>
+            <span class="text-[14px] font-bold text-[#e8b44a]">₹20,000</span>
+          </label>
+
+          <label id="course-3" class="course-opt flex items-center justify-between bg-[#22223a] border-[1.5px] border-transparent rounded-[14px] px-[16px] py-[14px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45]" onclick="selectCourse('3')">
+            <span class="text-[14px] font-semibold text-[#e0e0f0]">Fundamental Analysis & Valuation</span>
+            <span class="text-[14px] font-bold text-[#e8b44a]">₹45,000</span>
+          </label>
+
+          <label id="course-4" class="course-opt flex items-center justify-between bg-[#22223a] border-[1.5px] border-transparent rounded-[14px] px-[16px] py-[14px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45]" onclick="selectCourse('4')">
+            <span class="text-[14px] font-semibold text-[#e0e0f0]">Derivatives & Options Strategies</span>
+            <span class="text-[14px] font-bold text-[#e8b44a]">₹50,000</span>
+          </label>
+
+          <label id="course-5" class="course-opt flex items-center justify-between bg-[#22223a] border-[1.5px] border-transparent rounded-[14px] px-[16px] py-[14px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45]" onclick="selectCourse('5')">
+            <span class="text-[14px] font-semibold text-[#e0e0f0]">Certification Course</span>
+            <span class="text-[14px] font-bold text-[#e8b44a]">₹60,000</span>
+          </label>
+
+          <label id="course-custom" class="course-opt flex items-center justify-between bg-[#22223a] border-[1.5px] border-transparent rounded-[14px] px-[16px] py-[14px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45]" onclick="selectCourse('custom')">
+            <span class="text-[14px] font-semibold text-[#e0e0f0]">Other / Custom Amount</span>
+            <span class="text-[14px] font-bold text-[#e8b44a]">–</span>
+          </label>
+
+        </div>
+
+        <!-- Custom amount -->
+        <div id="custom-amount-container" class="hidden gap-[10px] mb-[10px] items-center animate-in">
+          <span class="text-[14px] font-semibold text-[#7a7a9a] whitespace-nowrap">₹</span>
+          <input 
+            id="custom-amount-input"
+            class="flex-1 bg-[#22223a] border-[1.5px] border-[#2e2e4a] rounded-[12px] px-[16px] py-[12px] text-[#e0e0f0] font-outfit text-[16px] font-semibold outline-none transition-colors focus:border-[#e8b44a] placeholder:text-[#444460] placeholder:font-normal"
+            type="number" 
+            placeholder="Enter custom amount" 
+            min="1"
+            oninput="handleCustomAmount(event)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= RIGHT PANE: PAYMENT ACTION ================= -->
+    <div class="flex-1 bg-[#151525] p-[24px] lg:p-[40px] flex flex-col justify-center">
+      
+      <!-- Error / Success Message Box -->
+      <div id="message-box" class="hidden rounded-[12px] p-[14px_16px] text-[13px] font-medium leading-relaxed mb-[20px] animate-in"></div>
+
+      <!-- Amount display -->
+      <div class="bg-gradient-to-br from-[#e8b44a]/10 to-[#e8b44a]/5 border border-[#e8b44a]/25 rounded-[16px] p-[20px] flex items-center justify-between mb-[24px]">
+        <div>
+          <span class="block text-[12px] text-[#7a7a9a] font-semibold uppercase tracking-wider mb-1">Amount to Pay</span>
+          <span id="display-amount" class="text-[28px] font-extrabold text-[#e8b44a] tracking-[-0.5px] leading-none">₹ 0</span>
+        </div>
+        <div class="bg-[#e8b44a]/20 text-[#e8b44a] text-[11px] font-bold px-[10px] py-[4px] rounded-full">
+          INR
+        </div>
+      </div>
+
+      <!-- ── DESKTOP UX: Show QR Code by Default ── -->
+      <div id="desktop-qr-section" class="hidden lg:flex flex-col items-center justify-center bg-[#1a1a2e] border border-[#2e2e4a] rounded-[20px] p-[24px] mb-[20px]">
+        
+        <!-- Empty State (No amount selected) -->
+        <div id="desktop-qr-empty" class="flex flex-col items-center justify-center text-center p-4">
+          <span class="text-[32px] mb-2 opacity-50">📲</span>
+          <p class="text-[12px] text-[#7a7a9a] font-medium">Select a program to generate QR code</p>
+        </div>
+
+        <!-- Active QR State -->
+        <div id="desktop-qr-active" class="hidden flex-col items-center animate-in zoom-in">
+          <div class="bg-white p-[12px] rounded-[16px] shadow-lg mb-[16px]">
+            <img id="desktop-qr-img" src="" alt="UPI QR Code" class="w-[180px] h-[180px] object-contain" />
+          </div>
+          <div class="text-center">
+            <p class="text-[14px] text-[#e0e0f0] font-semibold mb-1">Scan to Pay via any UPI App</p>
+            <p class="text-[12px] text-[#7a7a9a]">GPay, PhonePe, Paytm, CRED, BHIM</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── MOBILE UX: Show Pay Button Prominently ── -->
+      <div class="lg:hidden flex flex-col gap-[12px] mb-[24px]">
+        <button 
+          id="pay-btn"
+          disabled
+          class="w-full p-[18px] border-none rounded-[16px] bg-gradient-to-br from-[#e8b44a] to-[#d4951e] text-[#1a1a2e] font-outfit text-[17px] font-extrabold cursor-pointer tracking-[0.3px] transition-all shadow-[0_8px_24px_rgba(232,180,74,0.35)] flex items-center justify-center gap-[8px] hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(232,180,74,0.45)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+          onclick="openUPI()"
+        >
+          ⚡ Pay via UPI App
+        </button>
+        
+        <button id="mobile-qr-toggle" onclick="showMobileQR()" class="hidden text-[13px] text-[#7a7a9a] font-medium hover:text-[#e0e0f0] transition-colors py-2">
+          Having trouble? Show QR Code instead
+        </button>
+
+        <!-- Mobile QR Fallback -->
+        <div id="mobile-qr-display" class="hidden bg-[#1a1a2e] border border-[#2e2e4a] rounded-[16px] p-4 flex-col items-center justify-center text-center animate-in zoom-in">
+          <p class="text-[12px] text-[#e8b44a] font-bold mb-3 uppercase tracking-wide">Scan to Pay</p>
+          <div class="bg-white p-3 rounded-[12px] mb-3">
+            <img id="mobile-qr-img" src="" alt="UPI QR Code" class="w-[160px] h-[160px] object-contain" />
+          </div>
+          <p class="text-[12px] text-[#7a7a9a] leading-relaxed">
+            Take a screenshot and use <strong class="text-[#e0e0f0]">Scan from Gallery</strong> in your UPI app.
+          </p>
+        </div>
+      </div>
+
+      <!-- Unified App Tags -->
+      <div class="hidden lg:flex justify-center gap-[8px] flex-wrap mb-[20px]">
+        <div class="inline-flex items-center gap-[6px] bg-[#1a1a2e] border border-[#2e2e4a] rounded-full px-[14px] py-[6px] text-[12px] text-[#7a7a9a] font-semibold">
+          <span class="w-[6px] h-[6px] bg-[#7cfc00] rounded-full animate-pulse-dot"></span>
+          hzmujawar99@okhdfcbank
+        </div>
+      </div>
+
+      <!-- Fix note -->
+      <div class="bg-[#64dc82]/10 border border-[#64dc82]/20 rounded-[12px] p-[14px] text-[12px] text-[#80c090] leading-[1.6] mt-auto">
+        ✅ <strong class="text-[#90f0a0]">Verified:</strong> Secured connection with strict <strong class="text-[#90f0a0]">mc, mode, tr</strong> parameters for successful debit mapping.
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ── Config ──
+    const UPI_ID = 'hzmujawar99@okhdfcbank';
+    const UPI_NAME = 'Captgains';
+
+    const courses = {
+      '1': 10000,
+      '2': 20000,
+      '3': 45000,
+      '4': 50000,
+      '5': 60000,
+      'custom': 0
+    };
+
+    let selectedCourseId = null;
+    let customAmountStr = '';
+    let finalAmount = 0;
+
+    function selectCourse(id) {
+      selectedCourseId = id;
+      
+      // Update UI selection styles
+      document.querySelectorAll('.course-opt').forEach(el => {
+        el.classList.remove('border-[#e8b44a]', 'bg-[#e8b44a]/10', 'shadow-[0_4px_12px_rgba(232,180,74,0.1)]');
+        el.classList.add('border-transparent');
+      });
+      
+      const selectedEl = document.getElementById(`course-${id}`);
+      selectedEl.classList.remove('border-transparent');
+      selectedEl.classList.add('border-[#e8b44a]', 'bg-[#e8b44a]/10', 'shadow-[0_4px_12px_rgba(232,180,74,0.1)]');
+
+      // Handle custom input visibility
+      const customContainer = document.getElementById('custom-amount-container');
+      const customInput = document.getElementById('custom-amount-input');
+      
+      if (id === 'custom') {
+        customContainer.classList.remove('hidden');
+        customContainer.classList.add('flex');
+      } else {
+        customContainer.classList.add('hidden');
+        customContainer.classList.remove('flex');
+        customInput.value = '';
+        customAmountStr = '';
+      }
+
+      hideMessage();
+      hideMobileQR();
+      updateLogic();
+    }
+
+    function handleCustomAmount(event) {
+      customAmountStr = event.target.value;
+      hideMessage();
+      hideMobileQR();
+      updateLogic();
+    }
+
+    function updateLogic() {
+      // Calculate amount
+      if (selectedCourseId === 'custom') {
+        const val = parseFloat(customAmountStr);
+        finalAmount = (!isNaN(val) && val > 0) ? val : 0;
+      } else {
+        finalAmount = selectedCourseId ? courses[selectedCourseId] : 0;
+      }
+
+      const isValid = finalAmount > 0;
+
+      // Update Text Display
+      document.getElementById('display-amount').textContent = isValid 
+        ? `₹ ${finalAmount.toLocaleString('en-IN')}` 
+        : '₹ 0';
+
+      // Update Button
+      document.getElementById('pay-btn').disabled = !isValid;
+
+      // Update QR Codes & Toggles
+      const desktopEmpty = document.getElementById('desktop-qr-empty');
+      const desktopActive = document.getElementById('desktop-qr-active');
+      const mobileToggle = document.getElementById('mobile-qr-toggle');
+      
+      if (isValid) {
+        const upiUrl = generateUpiUrl();
+        const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUrl)}&margin=10&bgcolor=ffffff`;
+        
+        document.getElementById('desktop-qr-img').src = qrApi;
+        document.getElementById('mobile-qr-img').src = qrApi;
+        
+        desktopEmpty.classList.add('hidden');
+        desktopEmpty.classList.remove('flex');
+        desktopActive.classList.remove('hidden');
+        desktopActive.classList.add('flex');
+        
+        mobileToggle.classList.remove('hidden');
+        mobileToggle.classList.add('block');
+      } else {
+        desktopEmpty.classList.remove('hidden');
+        desktopEmpty.classList.add('flex');
+        desktopActive.classList.add('hidden');
+        desktopActive.classList.remove('flex');
+        
+        mobileToggle.classList.add('hidden');
+        mobileToggle.classList.remove('block');
+      }
+    }
+
+    function generateUpiUrl() {
+      if (finalAmount <= 0) return '';
+      const trId = `TXN${Date.now()}`;
+      const note = encodeURIComponent('Course Payment');
+      const name = encodeURIComponent(UPI_NAME);
+      const am = finalAmount.toFixed(2);
+      return `upi://pay?pa=${UPI_ID}&pn=${name}&mc=8299&mode=02&purpose=00&am=${am}&cu=INR&tn=${note}&tr=${trId}`;
+    }
+
+    function showMessage(text, isError) {
+      const msgBox = document.getElementById('message-box');
+      msgBox.textContent = text;
+      
+      if (isError) {
+        msgBox.className = 'rounded-[12px] p-[14px_16px] text-[13px] font-medium leading-relaxed mb-[20px] animate-in bg-[#ff5050]/10 border border-[#ff5050]/30 text-[#ff9090]';
+      } else {
+        msgBox.className = 'rounded-[12px] p-[14px_16px] text-[13px] font-medium leading-relaxed mb-[20px] animate-in bg-[#64dc82]/10 border border-[#64dc82]/30 text-[#80f0a0]';
+      }
+      
+      msgBox.style.display = 'block';
+      setTimeout(hideMessage, 7000);
+    }
+
+    function hideMessage() {
+      document.getElementById('message-box').style.display = 'none';
+    }
+
+    function showMobileQR() {
+      const mobileQrDisplay = document.getElementById('mobile-qr-display');
+      mobileQrDisplay.classList.remove('hidden');
+      mobileQrDisplay.classList.add('flex');
+    }
+
+    function hideMobileQR() {
+      const mobileQrDisplay = document.getElementById('mobile-qr-display');
+      mobileQrDisplay.classList.add('hidden');
+      mobileQrDisplay.classList.remove('flex');
+    }
+
+    function openUPI() {
+      if (finalAmount <= 0) {
+        showMessage('❌ Please select a course or enter a valid amount.', true);
+        return;
+      }
+
+      // Try launching the UPI intent
+      window.location.href = generateUpiUrl();
+
+      // Show fallback message and QR code after delay
+      setTimeout(() => {
+        showMessage("📲 If the app didn't open, please take a screenshot and scan the QR code below.", false);
+        showMobileQR();
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
