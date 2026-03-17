@@ -1,541 +1,205 @@
-<!DOCTYPE html>
-<html lang="en">
+import React, { useState } from 'react';
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Captgains – UPI Payment (Fixed)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet" />
-    <style>
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+export default function App() {
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [customAmountStr, setCustomAmountStr] = useState('');
+  const [message, setMessage] = useState(null); // { text, type: 'error' | 'success' }
 
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: #f5f0e8;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px 16px;
-        }
+  // ── Config ──
+  const UPI_ID = 'hzmujawar99@okhdfcbank';
+  const UPI_NAME = 'Captgains';
 
-        /* ── Payment Card ── */
-        .pay-section {
-            background: #1a1a2e;
-            border-radius: 28px;
-            width: 100%;
-            max-width: 400px;
-            overflow: hidden;
-            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
-        }
+  const courses = [
+    { id: 1, name: 'Beginner / Foundation Course', price: 10000 },
+    { id: 2, name: 'Technical Analysis', price: 20000 },
+    { id: 3, name: 'Fundamental Analysis & Valuation', price: 45000 },
+    { id: 4, name: 'Derivatives & Options Strategies', price: 50000 },
+    { id: 5, name: 'Certification Course', price: 60000 },
+    { id: 'custom', name: 'Other / Custom Amount', price: 0 }
+  ];
 
-        /* Header */
-        .pay-header {
-            background: linear-gradient(135deg, #e8b44a 0%, #d4951e 100%);
-            padding: 28px 28px 24px;
-            position: relative;
-            overflow: hidden;
-        }
+  const isCustom = selectedCourseId === 'custom';
 
-        .pay-header::before {
-            content: '';
-            position: absolute;
-            top: -40px;
-            right: -40px;
-            width: 140px;
-            height: 140px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-        }
+  const handleCourseSelect = (id) => {
+    setSelectedCourseId(id);
+    if (id !== 'custom') {
+      setCustomAmountStr(''); // Reset custom amount when switching to standard course
+    }
+    setMessage(null);
+  };
 
-        .pay-header::after {
-            content: '';
-            position: absolute;
-            bottom: -20px;
-            left: 30px;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.07);
-        }
+  const getFinalAmount = () => {
+    if (isCustom) {
+      const val = parseFloat(customAmountStr);
+      return (!isNaN(val) && val > 0) ? val : 0;
+    }
+    const course = courses.find(c => c.id === selectedCourseId);
+    return course ? course.price : 0;
+  };
 
-        .brand-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 14px;
-            position: relative;
-            z-index: 1;
-        }
+  const finalAmount = getFinalAmount();
+  const isValidAmount = finalAmount > 0;
 
-        .brand-icon {
-            width: 38px;
-            height: 38px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
+  const showMsg = (text, type) => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 5000);
+  };
 
-        .brand-name {
-            font-weight: 800;
-            font-size: 20px;
-            color: #fff;
-            letter-spacing: -0.3px;
-        }
+  const openUPI = () => {
+    if (!isValidAmount) {
+      showMsg('❌ Please select a course or enter a valid amount.', 'error');
+      return;
+    }
 
-        .brand-sub {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.75);
-            font-weight: 500;
-        }
+    // ✅ Generate a unique transaction reference (required by many merchant bank apps)
+    const trId = `TXN${Date.now()}`;
+    
+    // ✅ CORRECT UPI deep link — including the new 'tr' field
+    const note = encodeURIComponent('Captgains Course Payment');
+    const name = encodeURIComponent(UPI_NAME);
+    const am = finalAmount.toFixed(2);
 
-        .pay-header h2 {
-            font-size: 15px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.8);
-            position: relative;
-            z-index: 1;
-        }
+    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${name}&am=${am}&cu=INR&tn=${note}&tr=${trId}`;
 
-        /* UPI ID pill */
-        .upi-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255, 255, 255, 0.18);
-            border-radius: 20px;
-            padding: 5px 12px;
-            margin-top: 10px;
-            font-size: 13px;
-            color: #fff;
-            font-weight: 600;
-            position: relative;
-            z-index: 1;
-        }
+    window.location.href = upiUrl;
 
-        .upi-dot {
-            width: 7px;
-            height: 7px;
-            background: #7cfc00;
-            border-radius: 50%;
-            animation: pulse 1.8s infinite;
-        }
+    // Friendly fallback
+    setTimeout(() => {
+      showMsg('📲 If no UPI app opened, please make sure GPay / PhonePe / BHIM is installed on your phone.', 'success');
+    }, 2500);
+  };
 
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.5;
-                transform: scale(0.8);
-            }
-        }
-
-        /* Body */
-        .pay-body {
-            padding: 24px 24px 28px;
-        }
-
-        /* Course selector */
-        .section-label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            color: #7a7a9a;
-            margin-bottom: 12px;
-        }
-
-        .course-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .course-opt {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #22223a;
-            border: 1.5px solid transparent;
-            border-radius: 14px;
-            padding: 13px 16px;
-            cursor: pointer;
-            transition: all 0.18s;
-        }
-
-        .course-opt:hover {
-            border-color: #e8b44a;
-            background: #2a2a45;
-        }
-
-        .course-opt.selected {
-            border-color: #e8b44a;
-            background: rgba(232, 180, 74, 0.08);
-        }
-
-        .course-opt input[type=radio] {
-            display: none;
-        }
-
-        .course-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: #e0e0f0;
-        }
-
-        .course-price {
-            font-size: 14px;
-            font-weight: 700;
-            color: #e8b44a;
-        }
-
-        /* Custom amount */
-        .custom-row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            align-items: center;
-        }
-
-        .custom-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: #7a7a9a;
-            white-space: nowrap;
-        }
-
-        .custom-input {
-            flex: 1;
-            background: #22223a;
-            border: 1.5px solid #2e2e4a;
-            border-radius: 12px;
-            padding: 11px 14px;
-            color: #e0e0f0;
-            font-family: 'Outfit', sans-serif;
-            font-size: 15px;
-            font-weight: 600;
-            outline: none;
-            transition: border-color 0.18s;
-        }
-
-        .custom-input:focus {
-            border-color: #e8b44a;
-        }
-
-        .custom-input::placeholder {
-            color: #444460;
-            font-weight: 400;
-        }
-
-        /* Selected amount display */
-        .amount-display {
-            background: linear-gradient(135deg, rgba(232, 180, 74, 0.1), rgba(232, 180, 74, 0.05));
-            border: 1px solid rgba(232, 180, 74, 0.25);
-            border-radius: 14px;
-            padding: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .amount-label {
-            font-size: 12px;
-            color: #7a7a9a;
-            font-weight: 500;
-        }
-
-        .amount-value {
-            font-size: 24px;
-            font-weight: 800;
-            color: #e8b44a;
-            letter-spacing: -0.5px;
-        }
-
-        /* Pay Button */
-        .pay-btn {
-            width: 100%;
-            padding: 17px;
-            border: none;
-            border-radius: 16px;
-            background: linear-gradient(135deg, #e8b44a, #d4951e);
-            color: #1a1a2e;
-            font-family: 'Outfit', sans-serif;
-            font-size: 16px;
-            font-weight: 800;
-            cursor: pointer;
-            letter-spacing: 0.3px;
-            transition: all 0.18s;
-            box-shadow: 0 8px 24px rgba(232, 180, 74, 0.35);
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .pay-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 14px 32px rgba(232, 180, 74, 0.45);
-        }
-
-        .pay-btn:active {
-            transform: scale(0.98);
-        }
-
-        .pay-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        /* Apps row */
-        .apps-row {
-            display: flex;
-            gap: 6px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 16px;
-        }
-
-        .app-chip {
-            background: #22223a;
-            border-radius: 8px;
-            padding: 5px 10px;
-            font-size: 11px;
-            color: #7a7a9a;
-            font-weight: 600;
-        }
-
-        /* Error / Info */
-        .msg-box {
-            border-radius: 12px;
-            padding: 12px 14px;
-            font-size: 13px;
-            font-weight: 500;
-            line-height: 1.5;
-            margin-bottom: 14px;
-            display: none;
-        }
-
-        .msg-box.show {
-            display: block;
-        }
-
-        .msg-box.error {
-            background: rgba(255, 80, 80, 0.1);
-            border: 1px solid rgba(255, 80, 80, 0.3);
-            color: #ff9090;
-        }
-
-        .msg-box.success {
-            background: rgba(100, 220, 130, 0.1);
-            border: 1px solid rgba(100, 220, 130, 0.3);
-            color: #80f0a0;
-        }
-
-        /* Fix note */
-        .fix-note {
-            background: rgba(100, 220, 130, 0.07);
-            border: 1px solid rgba(100, 220, 130, 0.2);
-            border-radius: 12px;
-            padding: 12px 14px;
-            font-size: 12px;
-            color: #80c090;
-            line-height: 1.6;
-        }
-
-        .fix-note strong {
-            color: #90f0a0;
-        }
-    </style>
-</head>
-
-<body>
-
-    <div class="pay-section">
-
-        <!-- Header -->
-        <div class="pay-header">
-            <div class="brand-row">
-                <div class="brand-icon">📈</div>
-                <div>
-                    <div class="brand-name">Captgains</div>
-                    <div class="brand-sub">Trading & Training Institute</div>
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+      `}</style>
+      
+      <div className="min-h-screen bg-[#f5f0e8] flex items-center justify-center p-4 font-outfit">
+        <div className="bg-[#1a1a2e] rounded-[28px] w-full max-w-[400px] overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.05)]">
+          
+          {/* Header */}
+          <div className="bg-gradient-to-br from-[#e8b44a] to-[#d4951e] pt-[28px] px-[28px] pb-[24px] relative overflow-hidden">
+            <div className="absolute -top-[40px] -right-[40px] w-[140px] h-[140px] rounded-full bg-white/10"></div>
+            <div className="absolute -bottom-[20px] left-[30px] w-[80px] h-[80px] rounded-full bg-white/10 opacity-70"></div>
+            
+            <div className="flex items-center gap-[10px] mb-[14px] relative z-10">
+              <div className="w-[38px] h-[38px] bg-white/20 rounded-[10px] flex items-center justify-center text-[18px]">
+                📈
+              </div>
+              <div>
+                <div className="font-extrabold text-[20px] text-white tracking-[-0.3px] leading-tight">
+                  Captgains
                 </div>
+                <div className="text-[12px] text-white/75 font-medium leading-tight mt-0.5">
+                  Trading & Training Institute
+                </div>
+              </div>
             </div>
-            <h2>Quick UPI Payment</h2>
-            <div class="upi-pill">
-                <span class="upi-dot"></span>
-                hzmujawar99@okhdfcbank
+            
+            <h2 className="text-[15px] font-medium text-white/80 relative z-10 m-0">
+              Quick UPI Payment
+            </h2>
+            
+            <div className="inline-flex items-center gap-[6px] bg-white/20 rounded-full px-[12px] py-[5px] mt-[10px] text-[13px] text-white font-semibold relative z-10">
+              <span className="w-[7px] h-[7px] bg-[#7cfc00] rounded-full animate-pulse"></span>
+              {UPI_ID}
             </div>
-        </div>
+          </div>
 
-        <!-- Body -->
-        <div class="pay-body">
+          {/* Body */}
+          <div className="p-[24px] pb-[28px]">
+            
+            {/* Error / Success Message Box */}
+            {message && (
+              <div className={`rounded-[12px] p-[12px_14px] text-[13px] font-medium leading-relaxed mb-[14px] ${
+                message.type === 'error' 
+                  ? 'bg-[#ff5050]/10 border border-[#ff5050]/30 text-[#ff9090]' 
+                  : 'bg-[#64dc82]/10 border border-[#64dc82]/30 text-[#80f0a0]'
+              }`}>
+                {message.text}
+              </div>
+            )}
 
-            <!-- Error/Success -->
-            <div id="msg-box" class="msg-box"></div>
-
-            <!-- Course selector -->
-            <div class="section-label">Select Course</div>
-            <div class="course-grid">
-                <label class="course-opt" onclick="selectCourse(this, 10000)">
-                    <input type="radio" name="course" />
-                    <span class="course-name">Beginner / Foundation Course</span>
-                    <span class="course-price">₹10,000</span>
-                </label>
-                <label class="course-opt" onclick="selectCourse(this, 20000)">
-                    <input type="radio" name="course" />
-                    <span class="course-name">Technical Analysis</span>
-                    <span class="course-price">₹20,000</span>
-                </label>
-                <label class="course-opt" onclick="selectCourse(this, 45000)">
-                    <input type="radio" name="course" />
-                    <span class="course-name">Fundamental Analysis & Valuation</span>
-                    <span class="course-price">₹45,000</span>
-                </label>
-                <label class="course-opt" onclick="selectCourse(this, 50000)">
-                    <input type="radio" name="course" />
-                    <span class="course-name">Derivatives & Options Strategies</span>
-                    <span class="course-price">₹50,000</span>
-                </label>
-                <label class="course-opt" onclick="selectCourse(this, 60000)">
-                    <input type="radio" name="course" />
-                    <span class="course-name">Certification Course</span>
-                    <span class="course-price">₹60,000</span>
-                </label>
-                <label class="course-opt" onclick="selectCourse(this, 0)">
-                    <input type="radio" name="course" />
-                    <span class="course-name">Other / Custom Amount</span>
-                    <span class="course-price">–</span>
-                </label>
+            {/* Course selector */}
+            <div className="text-[11px] font-bold uppercase tracking-[1.2px] text-[#7a7a9a] mb-[12px]">
+              Select Course
             </div>
-
-            <!-- Custom amount -->
-            <div class="custom-row" id="custom-row" style="display:none;">
-                <span class="custom-label">₹</span>
-                <input class="custom-input" type="number" id="custom-amt" placeholder="Enter amount" min="1"
-                    oninput="updateDisplay()" />
-            </div>
-
-            <!-- Amount display -->
-            <div class="amount-display">
-                <span class="amount-label">Amount to Pay</span>
-                <span class="amount-value" id="amt-display">₹ —</span>
+            
+            <div className="flex flex-col gap-[8px] mb-[20px]">
+              {courses.map((course) => {
+                const isSelected = selectedCourseId === course.id;
+                return (
+                  <label 
+                    key={course.id}
+                    className={`flex items-center justify-between bg-[#22223a] border-[1.5px] rounded-[14px] px-[16px] py-[13px] cursor-pointer transition-all hover:border-[#e8b44a] hover:bg-[#2a2a45] ${
+                      isSelected ? 'border-[#e8b44a] bg-[#e8b44a]/10' : 'border-transparent'
+                    }`}
+                    onClick={() => handleCourseSelect(course.id)}
+                  >
+                    <input type="radio" name="course" className="hidden" />
+                    <span className="text-[14px] font-semibold text-[#e0e0f0]">{course.name}</span>
+                    <span className="text-[14px] font-bold text-[#e8b44a]">
+                      {course.price > 0 ? `₹${course.price.toLocaleString('en-IN')}` : '–'}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
 
-            <!-- Pay Button -->
-            <button class="pay-btn" id="pay-btn" onclick="openUPI()" disabled>
-                ⚡ Pay via UPI App
+            {/* Custom amount */}
+            {isCustom && (
+              <div className="flex gap-[10px] mb-[20px] items-center">
+                <span className="text-[13px] font-semibold text-[#7a7a9a] whitespace-nowrap">₹</span>
+                <input 
+                  className="flex-1 bg-[#22223a] border-[1.5px] border-[#2e2e4a] rounded-[12px] px-[14px] py-[11px] text-[#e0e0f0] font-outfit text-[15px] font-semibold outline-none transition-colors focus:border-[#e8b44a] placeholder:text-[#444460] placeholder:font-normal"
+                  type="number" 
+                  placeholder="Enter amount" 
+                  min="1"
+                  value={customAmountStr}
+                  onChange={(e) => {
+                    setCustomAmountStr(e.target.value);
+                    setMessage(null);
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Amount display */}
+            <div className="bg-gradient-to-br from-[#e8b44a]/10 to-[#e8b44a]/5 border border-[#e8b44a]/25 rounded-[14px] p-[16px] flex items-center justify-between mb-[20px]">
+              <span className="text-[12px] text-[#7a7a9a] font-medium">Amount to Pay</span>
+              <span className="text-[24px] font-extrabold text-[#e8b44a] tracking-[-0.5px]">
+                {isValidAmount ? `₹ ${finalAmount.toLocaleString('en-IN')}` : '₹ —'}
+              </span>
+            </div>
+
+            {/* Pay Button */}
+            <button 
+              className="w-full p-[17px] border-none rounded-[16px] bg-gradient-to-br from-[#e8b44a] to-[#d4951e] text-[#1a1a2e] font-outfit text-[16px] font-extrabold cursor-pointer tracking-[0.3px] transition-all shadow-[0_8px_24px_rgba(232,180,74,0.35)] mb-[12px] flex items-center justify-center gap-[8px] hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(232,180,74,0.45)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+              onClick={openUPI}
+              disabled={!isValidAmount}
+            >
+              ⚡ Pay via UPI App
             </button>
 
-            <!-- Apps -->
-            <div class="apps-row">
-                <span class="app-chip">GPay</span>
-                <span class="app-chip">PhonePe</span>
-                <span class="app-chip">Paytm</span>
-                <span class="app-chip">BHIM</span>
-                <span class="app-chip">Amazon Pay</span>
+            {/* Apps */}
+            <div className="flex gap-[6px] justify-center flex-wrap mb-[16px]">
+              {['GPay', 'PhonePe', 'Paytm', 'BHIM', 'Amazon Pay'].map(app => (
+                <span key={app} className="bg-[#22223a] rounded-[8px] px-[10px] py-[5px] text-[11px] text-[#7a7a9a] font-semibold">
+                  {app}
+                </span>
+              ))}
             </div>
 
-            <!-- Fix note -->
-            <div class="fix-note">
-                ✅ <strong>Fixed:</strong> Uses complete <code>upi://pay</code> link with <strong>pa, pn, am, cu,
-                    tn</strong> — all required fields included. No "money not debited" errors.
+            {/* Fix note */}
+            <div className="bg-[#64dc82]/10 border border-[#64dc82]/20 rounded-[12px] p-[12px_14px] text-[12px] text-[#80c090] leading-[1.6]">
+              ✅ <strong className="text-[#90f0a0]">Fixed:</strong> Uses complete <code>upi://pay</code> link with <strong className="text-[#90f0a0]">pa, pn, am, cu, tn</strong> — all required fields included. No "money not debited" errors.
             </div>
 
+          </div>
         </div>
-    </div>
-
-    <script>
-        // ── Config ──
-        const UPI_ID = 'hzmujawar99@okhdfcbank';  // ✅ your correct UPI ID
-        const UPI_NAME = 'Captgains';
-
-        let selectedAmount = null;
-        let isCustom = false;
-
-        function selectCourse(el, amount) {
-            document.querySelectorAll('.course-opt').forEach(o => o.classList.remove('selected'));
-            el.classList.add('selected');
-
-            isCustom = (amount === 0);
-            const customRow = document.getElementById('custom-row');
-            customRow.style.display = isCustom ? 'flex' : 'none';
-
-            if (!isCustom) {
-                selectedAmount = amount;
-                document.getElementById('custom-amt').value = '';
-            } else {
-                selectedAmount = null;
-            }
-            updateDisplay();
-        }
-
-        function updateDisplay() {
-            if (isCustom) {
-                const val = parseFloat(document.getElementById('custom-amt').value);
-                selectedAmount = (!isNaN(val) && val > 0) ? val : null;
-            }
-
-            const display = document.getElementById('amt-display');
-            const btn = document.getElementById('pay-btn');
-
-            if (selectedAmount && selectedAmount > 0) {
-                display.textContent = '₹ ' + selectedAmount.toLocaleString('en-IN');
-                btn.disabled = false;
-            } else {
-                display.textContent = '₹ —';
-                btn.disabled = true;
-            }
-        }
-
-        function showMsg(text, type) {
-            const box = document.getElementById('msg-box');
-            box.textContent = text;
-            box.className = 'msg-box show ' + type;
-            setTimeout(() => box.classList.remove('show'), 5000);
-        }
-
-        function openUPI() {
-            if (!selectedAmount || selectedAmount <= 0) {
-                showMsg('❌ Please select a course or enter a valid amount.', 'error');
-                return;
-            }
-
-            // ✅ CORRECT UPI deep link — all 5 required fields present
-            const note = encodeURIComponent('Captgains Course Payment');
-            const name = encodeURIComponent(UPI_NAME);
-            const am = selectedAmount.toFixed(2);
-
-            const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${name}&am=${am}&cu=INR&tn=${note}`;
-
-            window.location.href = upiUrl;
-
-            // Friendly fallback
-            setTimeout(() => {
-                showMsg('📲 If no UPI app opened, please make sure GPay / PhonePe / BHIM is installed on your phone.', 'success');
-            }, 2500);
-        }
-    </script>
-</body>
-
-</html>
+      </div>
+    </>
+  );
+}
