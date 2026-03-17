@@ -183,9 +183,9 @@
         </div>
       </div>
 
-      <!-- Fix note -->
-      <div class="bg-[#64dc82]/10 border border-[#64dc82]/20 rounded-[12px] p-[14px] text-[12px] text-[#80c090] leading-[1.6] mt-auto">
-        ✅ <strong class="text-[#90f0a0]">Verified:</strong> Secured connection with strict <strong class="text-[#90f0a0]">mc, mode, tr</strong> parameters for successful debit mapping.
+      <!-- Testing Fix note -->
+      <div class="bg-[#ff5050]/10 border border-[#ff5050]/20 rounded-[12px] p-[14px] text-[12px] text-[#ff9090] leading-[1.6] mt-auto">
+        ⚠️ <strong class="text-[#ffb0b0]">Testing Warning:</strong> You CANNOT pay yourself. If you try to pay your own UPI ID using an app linked to the same bank account, it will always say <strong>"Payment Failed"</strong> or <strong>"Money not debited"</strong>. Please ask a friend to test it.
       </div>
 
     </div>
@@ -299,11 +299,18 @@
 
     function generateUpiUrl() {
       if (finalAmount <= 0) return '';
-      const trId = `TXN${Date.now()}`;
-      const note = encodeURIComponent('Course Payment');
+      // Simplified note without special chars
+      const note = encodeURIComponent('Captgains Payment');
       const name = encodeURIComponent(UPI_NAME);
-      const am = finalAmount.toFixed(2);
-      return `upi://pay?pa=${UPI_ID}&pn=${name}&mc=8299&mode=02&purpose=00&am=${am}&cu=INR&tn=${note}&tr=${trId}`;
+      
+      // Fix: Some UPI apps fail if the amount has unnecessary decimals (e.g. 10000.00). 
+      // This strips decimals if it's a whole number.
+      const am = finalAmount % 1 === 0 ? finalAmount.toString() : finalAmount.toFixed(2);
+      
+      // Fix: Reverted to clean, universally accepted format. Removed 'mc', 'mode', and 'tr' 
+      // because if your UPI ID is a standard personal/business account (and not a verified NPCI merchant), 
+      // adding strict merchant flags forces the bank to reject the transaction.
+      return `upi://pay?pa=${UPI_ID}&pn=${name}&am=${am}&cu=INR&tn=${note}`;
     }
 
     function showMessage(text, isError) {
