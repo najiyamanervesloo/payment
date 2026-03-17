@@ -4,6 +4,8 @@ export default function App() {
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [customAmountStr, setCustomAmountStr] = useState('');
   const [message, setMessage] = useState(null); // { text, type: 'error' | 'success' }
+  const [showQR, setShowQR] = useState(false);
+  const [qrUrl, setQrUrl] = useState('');
 
   // ── Config ──
   const UPI_ID = 'hzmujawar99@okhdfcbank';
@@ -26,6 +28,7 @@ export default function App() {
       setCustomAmountStr(''); // Reset custom amount when switching to standard course
     }
     setMessage(null);
+    setShowQR(false); // Hide QR when changing selection
   };
 
   const getFinalAmount = () => {
@@ -42,7 +45,7 @@ export default function App() {
 
   const showMsg = (text, type) => {
     setMessage({ text, type });
-    setTimeout(() => setMessage(null), 5000);
+    setTimeout(() => setMessage(null), 7000);
   };
 
   const openUPI = () => {
@@ -51,21 +54,28 @@ export default function App() {
       return;
     }
 
-    // ✅ Generate a unique transaction reference (required by many merchant bank apps)
+    // ✅ Generate a unique transaction reference
     const trId = `TXN${Date.now()}`;
     
-    // ✅ CORRECT UPI deep link — including the new 'tr' field
-    const note = encodeURIComponent('Captgains Course Payment');
+    // ✅ Add Advanced Parameters (mc, mode, purpose) to bypass security blocks
+    const note = encodeURIComponent('Course Payment');
     const name = encodeURIComponent(UPI_NAME);
     const am = finalAmount.toFixed(2);
+    
+    // mc=8299 is for Education/Training Services. mode=02 is secure intent. purpose=00 is default.
+    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${name}&mc=8299&mode=02&purpose=00&am=${am}&cu=INR&tn=${note}&tr=${trId}`;
 
-    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=${name}&am=${am}&cu=INR&tn=${note}&tr=${trId}`;
+    // Generate QR Code URL for fallback
+    const generatedQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}&margin=10&bgcolor=ffffff`;
+    setQrUrl(generatedQrUrl);
+    setShowQR(true); // Show the QR code
 
+    // Try opening the UPI App
     window.location.href = upiUrl;
 
     // Friendly fallback
     setTimeout(() => {
-      showMsg('📲 If no UPI app opened, please make sure GPay / PhonePe / BHIM is installed on your phone.', 'success');
+      showMsg('📲 If the app failed or didn\'t open, please take a screenshot and scan the QR code below.', 'success');
     }, 2500);
   };
 
@@ -161,6 +171,7 @@ export default function App() {
                   onChange={(e) => {
                     setCustomAmountStr(e.target.value);
                     setMessage(null);
+                    setShowQR(false);
                   }}
                 />
               </div>
@@ -183,6 +194,20 @@ export default function App() {
               ⚡ Pay via UPI App
             </button>
 
+            {/* QR Code Fallback */}
+            {showQR && (
+              <div className="mt-4 mb-4 bg-[#22223a] border border-[#2e2e4a] rounded-[16px] p-4 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
+                <p className="text-[12px] text-[#e8b44a] font-bold mb-3 uppercase tracking-wide">Alternative Option</p>
+                <div className="bg-white p-3 rounded-[12px] mb-3">
+                  <img src={qrUrl} alt="UPI QR Code" className="w-[180px] h-[180px] object-contain" />
+                </div>
+                <p className="text-[12px] text-[#7a7a9a] leading-relaxed">
+                  Take a screenshot and open PhonePe / GPay <br/> 
+                  Select <strong className="text-[#e0e0f0]">"Scan from Gallery"</strong>
+                </p>
+              </div>
+            )}
+
             {/* Apps */}
             <div className="flex gap-[6px] justify-center flex-wrap mb-[16px]">
               {['GPay', 'PhonePe', 'Paytm', 'BHIM', 'Amazon Pay'].map(app => (
@@ -194,7 +219,7 @@ export default function App() {
 
             {/* Fix note */}
             <div className="bg-[#64dc82]/10 border border-[#64dc82]/20 rounded-[12px] p-[12px_14px] text-[12px] text-[#80c090] leading-[1.6]">
-              ✅ <strong className="text-[#90f0a0]">Fixed:</strong> Uses complete <code>upi://pay</code> link with <strong className="text-[#90f0a0]">pa, pn, am, cu, tn</strong> — all required fields included. No "money not debited" errors.
+              ✅ <strong className="text-[#90f0a0]">Fixed:</strong> Uses complete <code>upi://pay</code> link with <strong className="text-[#90f0a0]">pa, pn, am, cu, tn, tr, mc, mode</strong> — all required fields included. QR Fallback added.
             </div>
 
           </div>
